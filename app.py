@@ -408,36 +408,30 @@ with tab3:
                     if 'id' in df_upload.columns:
                         df_upload = df_upload.drop(columns=['id'])
                     
+                    # ----------------- SMART COLUMN MATCHING (नवीन सुधारणा) -----------------
+                    df_upload.columns = [str(c).strip() for c in df_upload.columns]
+                    for col in df_upload.columns:
+                        col_lower = col.lower()
+                        if 'inward' in col_lower or 'आवक' in col:
+                            df_upload = df_upload.rename(columns={col: 'inward_no'})
+                        elif 'date' in col_lower or 'दिनांक' in col:
+                            if 'inward' in col_lower or 'प्राप्त' in col:
+                                df_upload = df_upload.rename(columns={col: 'inward_date'})
+                        elif 'subject' in col_lower or 'विषय' in col:
+                            df_upload = df_upload.rename(columns={col: 'subject'})
+                        elif 'from' in col_lower or 'कोणाकडून' in col:
+                            df_upload = df_upload.rename(columns={col: 'letter_from'})
+                        elif 'type' in col_lower or 'प्रकार' in col:
+                            df_upload = df_upload.rename(columns={col: 'letter_type'})
+                        elif 'action' in col_lower or 'कार्यवाही' in col:
+                            df_upload = df_upload.rename(columns={col: 'action_taken'})
+                        elif 'remark' in col_lower or 'शेरा' in col:
+                            df_upload = df_upload.rename(columns={col: 'remarks'})
+                    # ------------------------------------------------------------------------
+
                     cursor = conn.cursor()
                     cursor.execute("PRAGMA table_info(tapal_entries)")
                     db_columns = [row[1] for row in cursor.fetchall() if row[1] != 'id']
-                    
-                    column_mapping = {
-                        'आवक क्रमांक': 'inward_no', 
-                        'आवक क्र': 'inward_no', 
-                        'Inward No': 'inward_no',
-                        'Inward / computer No': 'inward_no',
-                        'Inward/computer No': 'inward_no',
-                        'Inward / Computer No': 'inward_no',
-                        'आवक दिनांक': 'inward_date', 
-                        'Inward Date': 'inward_date',
-                        'पत्र क्र. व दिनांक': 'letter_no_date', 
-                        'पत्र क्र व दिनांक': 'letter_no_date',
-                        'कोणाकडून मिळाले': 'letter_from', 
-                        'From': 'letter_from',
-                        'पत्राचा प्रकार': 'letter_type', 
-                        'Letter Type': 'letter_type',
-                        'पत्राचा विषय': 'subject', 
-                        'विषय': 'subject', 
-                        'Subject': 'subject',
-                        'कार्यवाही दिनांक': 'action_taken_date', 
-                        'Action Taken Date': 'action_taken_date',
-                        'केलेली कार्यवाही': 'action_taken', 
-                        'Action Taken': 'action_taken',
-                        'शेरा': 'remarks', 
-                        'Remarks': 'remarks'
-                    }
-                    df_upload = df_upload.rename(columns=column_mapping)
 
                     for col in db_columns:
                         if col not in df_upload.columns:
