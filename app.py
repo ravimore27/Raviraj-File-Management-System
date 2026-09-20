@@ -29,20 +29,42 @@ st.markdown("""
 conn = sqlite3.connect("tapal_data.db", check_same_thread=False)
 c = conn.cursor()
 
-# सर्वसमावेशक डेटाबेस टेबलची रचना (सर्व कॉलमसह)
+# सर्व कॉलम समाविष्ट करणारी सर्वसमावेशक डेटाबेस रचना
 c.execute('''
     CREATE TABLE IF NOT EXISTS tapal_entries (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        file_no TEXT, subject_code TEXT, inward_no TEXT, computer_no TEXT,
-        inward_date TEXT, letter_no_date TEXT, letter_from TEXT, letter_type TEXT,
-        subject TEXT, emp_name TEXT, address TEXT, district TEXT,
-        action_taken_date TEXT, action_taken TEXT, computer_no_2 TEXT,
-        application_close_date TEXT, final_action TEXT, final_action_details TEXT,
-        letter_sent_to TEXT, paper_go_in_record TEXT, calling_report TEXT, report_received_date TEXT,
+        pra_no TEXT,
+        file_no TEXT, 
+        subject_code TEXT, 
+        inward_no TEXT, 
+        computer_no TEXT,
+        inward_date TEXT, 
+        letter_no_date TEXT, 
+        letter_from TEXT, 
+        letter_type TEXT,
+        subject TEXT, 
+        emp_name TEXT, 
+        address TEXT, 
+        district TEXT,
+        action_taken_date TEXT, 
+        action_taken TEXT, 
+        computer_no_2 TEXT,
+        application_close_date TEXT, 
+        final_action TEXT, 
+        final_action_details TEXT,
+        letter_sent_to TEXT, 
+        paper_go_in_record TEXT, 
+        calling_report TEXT, 
+        report_received_date TEXT,
         info_requested_from TEXT,
         office_letter_no_date TEXT,
         reminder_letter_date TEXT,
-        remarks TEXT
+        remarks TEXT,
+        reminder_1 TEXT,
+        reminder_2 TEXT,
+        reminder_3 TEXT,
+        reminder_4 TEXT,
+        reminder_discription TEXT
     )
 ''')
 conn.commit()
@@ -411,55 +433,52 @@ with tab3:
                     if 'id' in df_upload.columns:
                         df_upload = df_upload.drop(columns=['id'])
                     
-                    # ----------------- अचूक आणि सर्वसमावेशक कॉलम मॅपिंग -----------------
+                    # ----------------- अचूक आणि परिपूर्ण कॉलम मॅपिंग (Worksheet.xlsx साठी) -----------------
                     df_upload.columns = [str(c).strip() for c in df_upload.columns]
                     
-                    rename_dict = {}
-                    for col in df_upload.columns:
-                        col_lower = col.lower()
-                        # Inward No / Computer No variations
-                        if 'inward' in col_lower or 'आवक' in col:
-                            rename_dict[col] = 'inward_no'
-                        elif 'subject code' in col_lower or 'विषय कोड' in col:
-                            rename_dict[col] = 'subject_code'
-                        elif 'file' in col_lower or 'फाईल' in col or 'फाइल' in col:
-                            rename_dict[col] = 'file_no'
-                        elif 'computer' in col_lower or 'कंप्युटर' in col or 'कम्प्युटर' in col:
-                            if '2' in col_lower or 'इतर' in col_lower:
-                                rename_dict[col] = 'computer_no_2'
-                            else:
-                                rename_dict[col] = 'computer_no'
-                        # Dates
-                        elif 'inward date' in col_lower or 'प्राप्त दिनांक' in col or 'दाखल दिनांक' in col:
-                            rename_dict[col] = 'inward_date'
-                        elif 'action taken date' in col_lower or 'कार्यवाही दिनांक' in col:
-                            rename_dict[col] = 'action_taken_date'
-                        elif 'date' in col_lower or 'दिनांक' in col:
-                            # जर विशिष्ट तारीख नसेल तर सर्वसाधारण इनवर्ड डेट गृहीत धरावी
-                            if 'inward' in col_lower:
-                                rename_dict[col] = 'inward_date'
-                        # Letter Details
-                        elif 'letter no' in col_lower or 'पत्र क्र' in col:
-                            rename_dict[col] = 'letter_no_date'
-                        elif 'from' in col_lower or 'कोणाकडून' in col or 'अर्जदार' in col:
-                            rename_dict[col] = 'letter_from'
-                        elif 'type' in col_lower or 'पत्राचा प्रकार' in col:
-                            rename_dict[col] = 'letter_type'
-                        elif 'subject' in col_lower or 'विषय' in col:
-                            rename_dict[col] = 'subject'
-                        elif 'emp' in col_lower or 'तक्रारदार' in col:
-                            rename_dict[col] = 'emp_name'
-                        elif 'address' in col_lower or 'पत्ता' in col:
-                            rename_dict[col] = 'address'
-                        elif 'district' in col_lower or 'जिल्हा' in col:
-                            rename_dict[col] = 'district'
-                        elif 'action' in col_lower or 'केलेली कार्यवाही' in col:
-                            rename_dict[col] = 'action_taken'
-                        elif 'remark' in col_lower or 'शेरा' in col:
-                            rename_dict[col] = 'remarks'
+                    rename_map = {
+                        'Pra No': 'pra_no',
+                        'Subject Code': 'subject_code',
+                        'Inward No': 'inward_no',
+                        'Inward Date': 'inward_date',
+                        'Letter No & Date': 'letter_no_date',
+                        'From': 'letter_from',
+                        'Letter Type': 'letter_type',
+                        'Subject': 'subject',
+                        'Emp Name': 'emp_name',
+                        'Address': 'address',
+                        'District': 'district',
+                        'Action Taken Date': 'action_taken_date',
+                        'Action Taken': 'action_taken',
+                        'Application Close Date': 'application_close_date',
+                        'Final Action': 'final_action',
+                        'Letter Sent to': 'letter_sent_to',
+                        'Paper Go to Record': 'paper_go_in_record',
+                        'Calling Report': 'calling_report',
+                        'Report Received Date': 'report_received_date',
+                        'Reminder 1': 'reminder_1',
+                        'Reminder 2': 'reminder_2',
+                        'Reminder 3': 'reminder_3',
+                        'Reminder 4': 'reminder_4',
+                        'Reminder Discription': 'reminder_discription'
+                    }
                     
-                    df_upload = df_upload.rename(columns=rename_dict)
-                    # ----------------------------------------------------------------------
+                    df_upload = df_upload.rename(columns=rename_map)
+
+                    # अतिरिक्त किंवा इतर कोणत्याही पर्यायी हेडर्ससाठी स्मार्ट मॅचिंग
+                    for col in df_upload.columns:
+                        col_lower = str(col).lower()
+                        if 'inward' in col_lower and 'no' in col_lower:
+                            df_upload = df_upload.rename(columns={col: 'inward_no'})
+                        elif 'inward' in col_lower and 'date' in col_lower:
+                            df_upload = df_upload.rename(columns={col: 'inward_date'})
+                        elif 'subject' in col_lower and 'code' not in col_lower:
+                            df_upload = df_upload.rename(columns={col: 'subject'})
+                        elif 'action' in col_lower and 'date' in col_lower:
+                            df_upload = df_upload.rename(columns={col: 'action_taken_date'})
+                        elif 'action' in col_lower and 'date' not in col_lower:
+                            df_upload = df_upload.rename(columns={col: 'action_taken'})
+                    # ------------------------------------------------------------------------------------
 
                     cursor = conn.cursor()
                     cursor.execute("PRAGMA table_info(tapal_entries)")
@@ -476,7 +495,7 @@ with tab3:
                         conn.commit()
                     
                     df_upload.to_sql('tapal_entries', conn, if_exists='append', index=False)
-                    st.success("✅ सर्व कॉलमचा डेटा सुरक्षित ठेवून नवीन फाईल यशस्वीरीत्या अपलोड केली आहे!")
+                    st.success("✅ सर्व कॉलमचा डेटा (Inward Date, Subject, Action Taken इ.) सुरक्षितपणे अपलोड झाला आहे!")
                     st.rerun()
                 except Exception as e:
                     st.error(f"फाइल अपलोड करताना त्रुटी आली: {e}")
