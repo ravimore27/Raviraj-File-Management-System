@@ -29,7 +29,6 @@ st.markdown("""
 conn = sqlite3.connect("tapal_data.db", check_same_thread=False)
 c = conn.cursor()
 
-# सर्व कॉलम समाविष्ट करणारी सर्वसमावेशक डेटाबेस रचना
 c.execute('''
     CREATE TABLE IF NOT EXISTS tapal_entries (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -430,13 +429,11 @@ with tab3:
                     else:
                         df_upload = pd.read_excel(uploaded_file)
                         
-                    if 'id' in df_upload.columns:
-                        df_upload = df_upload.drop(columns=['id'])
-                    
-                    # ----------------- अचूक आणि परिपूर्ण कॉलम मॅपिंग (Worksheet.xlsx साठी) -----------------
+                    # कोणत्याही फिक्स कॉलम नावावर अवलंबून न राहता थेट रिनेममॅप वापरणे
                     df_upload.columns = [str(c).strip() for c in df_upload.columns]
                     
                     rename_map = {
+                        'ID': 'id_excel',
                         'Pra No': 'pra_no',
                         'Subject Code': 'subject_code',
                         'Inward No': 'inward_no',
@@ -465,7 +462,7 @@ with tab3:
                     
                     df_upload = df_upload.rename(columns=rename_map)
 
-                    # अतिरिक्त किंवा इतर कोणत्याही पर्यायी हेडर्ससाठी स्मार्ट मॅचिंग
+                    # अतिरिक्त फ्लेक्सिबिलिटीसाठी स्मार्ट मॅचिंग लूप
                     for col in df_upload.columns:
                         col_lower = str(col).lower()
                         if 'inward' in col_lower and 'no' in col_lower:
@@ -478,7 +475,11 @@ with tab3:
                             df_upload = df_upload.rename(columns={col: 'action_taken_date'})
                         elif 'action' in col_lower and 'date' not in col_lower:
                             df_upload = df_upload.rename(columns={col: 'action_taken'})
-                    # ------------------------------------------------------------------------------------
+
+                    if 'id' in df_upload.columns:
+                        df_upload = df_upload.drop(columns=['id'])
+                    if 'id_excel' in df_upload.columns:
+                        df_upload = df_upload.drop(columns=['id_excel'])
 
                     cursor = conn.cursor()
                     cursor.execute("PRAGMA table_info(tapal_entries)")
@@ -495,7 +496,7 @@ with tab3:
                         conn.commit()
                     
                     df_upload.to_sql('tapal_entries', conn, if_exists='append', index=False)
-                    st.success("✅ सर्व कॉलमचा डेटा (Inward Date, Subject, Action Taken इ.) सुरक्षितपणे अपलोड झाला आहे!")
+                    st.success("✅ सर्व कॉलम आणि डेटा अचूकपणे सेव्ह झाले आहेत!")
                     st.rerun()
                 except Exception as e:
                     st.error(f"फाइल अपलोड करताना त्रुटी आली: {e}")
