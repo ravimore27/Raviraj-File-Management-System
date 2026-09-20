@@ -29,6 +29,7 @@ st.markdown("""
 conn = sqlite3.connect("tapal_data.db", check_same_thread=False)
 c = conn.cursor()
 
+# सर्वसमावेशक डेटाबेस टेबलची रचना (सर्व कॉलमसह)
 c.execute('''
     CREATE TABLE IF NOT EXISTS tapal_entries (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -410,45 +411,55 @@ with tab3:
                     if 'id' in df_upload.columns:
                         df_upload = df_upload.drop(columns=['id'])
                     
-                    # ----------------- अद्ययावत कॉम्प्रिहेन्सिव्ह स्मार्ट कॉलम मॅपिंग -----------------
+                    # ----------------- अचूक आणि सर्वसमावेशक कॉलम मॅपिंग -----------------
                     df_upload.columns = [str(c).strip() for c in df_upload.columns]
+                    
+                    rename_dict = {}
                     for col in df_upload.columns:
                         col_lower = col.lower()
+                        # Inward No / Computer No variations
                         if 'inward' in col_lower or 'आवक' in col:
-                            df_upload = df_upload.rename(columns={col: 'inward_no'})
-                        elif 'file' in col_lower or 'फाईल' in col or 'फाइल' in col:
-                            df_upload = df_upload.rename(columns={col: 'file_no'})
+                            rename_dict[col] = 'inward_no'
                         elif 'subject code' in col_lower or 'विषय कोड' in col:
-                            df_upload = df_upload.rename(columns={col: 'subject_code'})
-                        elif 'computer' in col_lower or 'कम्प्युटर' in col or 'कंप्युटर' in col:
+                            rename_dict[col] = 'subject_code'
+                        elif 'file' in col_lower or 'फाईल' in col or 'फाइल' in col:
+                            rename_dict[col] = 'file_no'
+                        elif 'computer' in col_lower or 'कंप्युटर' in col or 'कम्प्युटर' in col:
                             if '2' in col_lower or 'इतर' in col_lower:
-                                df_upload = df_upload.rename(columns={col: 'computer_no_2'})
+                                rename_dict[col] = 'computer_no_2'
                             else:
-                                df_upload = df_upload.rename(columns={col: 'computer_no'})
+                                rename_dict[col] = 'computer_no'
+                        # Dates
+                        elif 'inward date' in col_lower or 'प्राप्त दिनांक' in col or 'दाखल दिनांक' in col:
+                            rename_dict[col] = 'inward_date'
+                        elif 'action taken date' in col_lower or 'कार्यवाही दिनांक' in col:
+                            rename_dict[col] = 'action_taken_date'
                         elif 'date' in col_lower or 'दिनांक' in col:
-                            if 'inward' in col_lower or 'प्राप्त' in col or 'दाखल' in col:
-                                df_upload = df_upload.rename(columns={col: 'inward_date'})
-                            elif 'action' in col_lower or 'कार्यवाही' in col:
-                                df_upload = df_upload.rename(columns={col: 'action_taken_date'})
+                            # जर विशिष्ट तारीख नसेल तर सर्वसाधारण इनवर्ड डेट गृहीत धरावी
+                            if 'inward' in col_lower:
+                                rename_dict[col] = 'inward_date'
+                        # Letter Details
                         elif 'letter no' in col_lower or 'पत्र क्र' in col:
-                            df_upload = df_upload.rename(columns={col: 'letter_no_date'})
+                            rename_dict[col] = 'letter_no_date'
                         elif 'from' in col_lower or 'कोणाकडून' in col or 'अर्जदार' in col:
-                            df_upload = df_upload.rename(columns={col: 'letter_from'})
-                        elif 'type' in col_lower or 'प्रकार' in col:
-                            df_upload = df_upload.rename(columns={col: 'letter_type'})
+                            rename_dict[col] = 'letter_from'
+                        elif 'type' in col_lower or 'पत्राचा प्रकार' in col:
+                            rename_dict[col] = 'letter_type'
                         elif 'subject' in col_lower or 'विषय' in col:
-                            df_upload = df_upload.rename(columns={col: 'subject'})
+                            rename_dict[col] = 'subject'
                         elif 'emp' in col_lower or 'तक्रारदार' in col:
-                            df_upload = df_upload.rename(columns={col: 'emp_name'})
+                            rename_dict[col] = 'emp_name'
                         elif 'address' in col_lower or 'पत्ता' in col:
-                            df_upload = df_upload.rename(columns={col: 'address'})
+                            rename_dict[col] = 'address'
                         elif 'district' in col_lower or 'जिल्हा' in col:
-                            df_upload = df_upload.rename(columns={col: 'district'})
-                        elif 'action' in col_lower or 'कार्यवाही' in col:
-                            df_upload = df_upload.rename(columns={col: 'action_taken'})
+                            rename_dict[col] = 'district'
+                        elif 'action' in col_lower or 'केलेली कार्यवाही' in col:
+                            rename_dict[col] = 'action_taken'
                         elif 'remark' in col_lower or 'शेरा' in col:
-                            df_upload = df_upload.rename(columns={col: 'remarks'})
-                    # ------------------------------------------------------------------------------
+                            rename_dict[col] = 'remarks'
+                    
+                    df_upload = df_upload.rename(columns=rename_dict)
+                    # ----------------------------------------------------------------------
 
                     cursor = conn.cursor()
                     cursor.execute("PRAGMA table_info(tapal_entries)")
@@ -465,7 +476,7 @@ with tab3:
                         conn.commit()
                     
                     df_upload.to_sql('tapal_entries', conn, if_exists='append', index=False)
-                    st.success("✅ जुना डेटा पूर्णपणे काढून सर्व कॉलमसह नवीन फाईल यशस्वीरीत्या अपलोड झाली आहे!")
+                    st.success("✅ सर्व कॉलमचा डेटा सुरक्षित ठेवून नवीन फाईल यशस्वीरीत्या अपलोड केली आहे!")
                     st.rerun()
                 except Exception as e:
                     st.error(f"फाइल अपलोड करताना त्रुटी आली: {e}")
