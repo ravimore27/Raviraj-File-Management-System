@@ -394,11 +394,13 @@ with tab3:
             st.info("डाउनलोड करण्यासाठी डेटा उपलब्ध नाही.")
             
     with col_ul:
-        st.subheader("जुनी Excel किंवा CSV फाईल अपलोड करा")
-        uploaded_file = st.file_uploader("तुमची जुनी Excel किंवा CSV फाईल निवडा (Append करण्यासाठी)", type=["csv", "xlsx", "xls"])
+        st.subheader("नवीन Excel किंवा CSV फाईल अपलोड करा")
+        uploaded_file = st.file_uploader("तुमची नवीन Excel किंवा CSV फाईल निवडा", type=["csv", "xlsx", "xls"], key="new_file_uploader")
+        
+        replace_existing = st.checkbox("⚠️ जुना सर्व डेटा डिलीट करून नवीन फाईलचा डेटा टाका (Overwrite)", value=True)
         
         if uploaded_file is not None:
-            if st.button("🚀 अपलोड केलेली फाईल डेटाबेसमध्ये समाविष्ट (Append) करा"):
+            if st.button("🚀 फाईल अपलोड व अपडेट करा", type="primary"):
                 try:
                     if uploaded_file.name.endswith('.csv'):
                         df_upload = pd.read_csv(uploaded_file)
@@ -408,26 +410,45 @@ with tab3:
                     if 'id' in df_upload.columns:
                         df_upload = df_upload.drop(columns=['id'])
                     
-                    # ----------------- SMART COLUMN MATCHING (नवीन सुधारणा) -----------------
+                    # ----------------- अद्ययावत कॉम्प्रिहेन्सिव्ह स्मार्ट कॉलम मॅपिंग -----------------
                     df_upload.columns = [str(c).strip() for c in df_upload.columns]
                     for col in df_upload.columns:
                         col_lower = col.lower()
                         if 'inward' in col_lower or 'आवक' in col:
                             df_upload = df_upload.rename(columns={col: 'inward_no'})
+                        elif 'file' in col_lower or 'फाईल' in col or 'फाइल' in col:
+                            df_upload = df_upload.rename(columns={col: 'file_no'})
+                        elif 'subject code' in col_lower or 'विषय कोड' in col:
+                            df_upload = df_upload.rename(columns={col: 'subject_code'})
+                        elif 'computer' in col_lower or 'कम्प्युटर' in col or 'कंप्युटर' in col:
+                            if '2' in col_lower or 'इतर' in col_lower:
+                                df_upload = df_upload.rename(columns={col: 'computer_no_2'})
+                            else:
+                                df_upload = df_upload.rename(columns={col: 'computer_no'})
                         elif 'date' in col_lower or 'दिनांक' in col:
-                            if 'inward' in col_lower or 'प्राप्त' in col:
+                            if 'inward' in col_lower or 'प्राप्त' in col or 'दाखल' in col:
                                 df_upload = df_upload.rename(columns={col: 'inward_date'})
-                        elif 'subject' in col_lower or 'विषय' in col:
-                            df_upload = df_upload.rename(columns={col: 'subject'})
-                        elif 'from' in col_lower or 'कोणाकडून' in col:
+                            elif 'action' in col_lower or 'कार्यवाही' in col:
+                                df_upload = df_upload.rename(columns={col: 'action_taken_date'})
+                        elif 'letter no' in col_lower or 'पत्र क्र' in col:
+                            df_upload = df_upload.rename(columns={col: 'letter_no_date'})
+                        elif 'from' in col_lower or 'कोणाकडून' in col or 'अर्जदार' in col:
                             df_upload = df_upload.rename(columns={col: 'letter_from'})
                         elif 'type' in col_lower or 'प्रकार' in col:
                             df_upload = df_upload.rename(columns={col: 'letter_type'})
+                        elif 'subject' in col_lower or 'विषय' in col:
+                            df_upload = df_upload.rename(columns={col: 'subject'})
+                        elif 'emp' in col_lower or 'तक्रारदार' in col:
+                            df_upload = df_upload.rename(columns={col: 'emp_name'})
+                        elif 'address' in col_lower or 'पत्ता' in col:
+                            df_upload = df_upload.rename(columns={col: 'address'})
+                        elif 'district' in col_lower or 'जिल्हा' in col:
+                            df_upload = df_upload.rename(columns={col: 'district'})
                         elif 'action' in col_lower or 'कार्यवाही' in col:
                             df_upload = df_upload.rename(columns={col: 'action_taken'})
                         elif 'remark' in col_lower or 'शेरा' in col:
                             df_upload = df_upload.rename(columns={col: 'remarks'})
-                    # ------------------------------------------------------------------------
+                    # ------------------------------------------------------------------------------
 
                     cursor = conn.cursor()
                     cursor.execute("PRAGMA table_info(tapal_entries)")
@@ -439,8 +460,12 @@ with tab3:
                             
                     df_upload = df_upload[[col for col in db_columns if col in df_upload.columns]]
                     
+                    if replace_existing:
+                        cursor.execute("DELETE FROM tapal_entries")
+                        conn.commit()
+                    
                     df_upload.to_sql('tapal_entries', conn, if_exists='append', index=False)
-                    st.success("✅ फाईलमधील सर्व डेटा यशस्वीरीत्या डेटाबेसमध्ये जोडला गेला आहे!")
+                    st.success("✅ जुना डेटा पूर्णपणे काढून सर्व कॉलमसह नवीन फाईल यशस्वीरीत्या अपलोड झाली आहे!")
                     st.rerun()
                 except Exception as e:
                     st.error(f"फाइल अपलोड करताना त्रुटी आली: {e}")
