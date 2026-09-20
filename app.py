@@ -67,38 +67,41 @@ def format_to_ddmmyyyy(date_val):
         val_str = val_str[:-2]
     if ' ' in val_str:
         val_str = val_str.split(' ')[0]
-    # तारीख बदलू नये म्हणून जशी आहे तशी टेक्स्ट स्वरूपात रिटर्न करा
-    return val_str
+    try:
+        dt = pd.to_datetime(val_str, dayfirst=True, errors='coerce')
+        if pd.notna(dt):
+            return dt.strftime('%d/%m/%Y')
+        return val_str
+    except Exception:
+        return val_str
 
 def parse_date_safely(date_str):
     if not date_str or str(date_str).lower() in ['nan', 'nat', 'none', '']:
-        return date.today()
+        return None
     val_str = str(date_str).strip()
     if val_str.endswith('.0'):
         val_str = val_str[:-2]
     if ' ' in val_str:
         val_str = val_str.split(' ')[0]
     try:
-        parts = val_str.split('/')
-        if len(parts) == 3:
-            return date(int(parts[2]), int(parts[1]), int(parts[0]))
+        dt = pd.to_datetime(val_str, dayfirst=True, errors='coerce')
+        return dt.date() if not pd.isna(dt) else None
     except Exception:
-        pass
-    return date.today()
+        return None
 
 def calculate_pending_days(inward_date_str):
     if not inward_date_str or pd.isna(inward_date_str) or str(inward_date_str).lower() in ['nan', 'nat', 'none', '']:
         return ""
     try:
-        val_str = str(inward_date_str).strip().split(' ')[0]
-        parts = val_str.split('/')
-        if len(parts) == 3:
-            inward_dt = datetime(int(parts[2]), int(parts[1]), int(parts[0]))
-            days = (datetime.now() - inward_dt).days
-            return f"{days} दिवस" if days >= 0 else "0 दिवस"
+        inward_dt = pd.to_datetime(inward_date_str, format='%d/%m/%Y', dayfirst=True, errors='coerce')
+        if pd.isna(inward_dt):
+            inward_dt = pd.to_datetime(inward_date_str, dayfirst=True, errors='coerce')
+        if pd.isna(inward_dt):
+            return ""
+        days = (datetime.now() - inward_dt).days
+        return f"{days} दिवस" if days >= 0 else "0 दिवस"
     except Exception:
-        pass
-    return ""
+        return ""
 
 def clean_df(df):
     if df is not None and not df.empty:
@@ -390,18 +393,21 @@ with tab3:
         if uploaded_file is not None:
             if st.button("🚀 अपलोड केलेली फाईल डेटाबेसमध्ये समाविष्ट (Append) करा"):
                 try:
+                    # फाईलचा प्रकार ओळखून वाचणे
                     if uploaded_file.name.endswith('.csv'):
-                        df_upload = pd.read_csv(uploaded_file, dtype=str)
+                        df_upload = pd.read_csv(uploaded_file)
                     else:
-                        df_upload = pd.read_excel(uploaded_file, dtype=str)
+                        df_upload = pd.read_excel(uploaded_file)
                         
                     if 'id' in df_upload.columns:
                         df_upload = df_upload.drop(columns=['id'])
                     
+                    # डेटाबेसचे मूळ कॉलम्स मिळवणे
                     cursor = conn.cursor()
                     cursor.execute("PRAGMA table_info(tapal_entries)")
                     db_columns = [row[1] for row in cursor.fetchall() if row[1] != 'id']
                     
+                    # स्मार्ट कॉलम मॅपिंग (मराठी/इंग्रजी हेडर्स डेटाबेसशी जुळवणे)
                     column_mapping = {
                         'आवक क्रमांक': 'inward_no', 'आवक क्र': 'inward_no', 'Inward No': 'inward_no',
                         'आवक दिनांक': 'inward_date', 'Inward Date': 'inward_date',
@@ -415,12 +421,14 @@ with tab3:
                     }
                     df_upload = df_upload.rename(columns=column_mapping)
 
+                    # आवश्यक कॉलम्स जोडणे जेणेकरून एरर येणार नाही
                     for col in db_columns:
                         if col not in df_upload.columns:
                             df_upload[col] = ""
                             
                     df_upload = df_upload[[col for col in db_columns if col in df_upload.columns]]
                     
+                    # डेटाबेसमध्ये सुरक्षितपणे ॲपेंड करणे
                     df_upload.to_sql('tapal_entries', conn, if_exists='append', index=False)
                     st.success("✅ फाईलमधील सर्व डेटा यशस्वीरीत्या डेटाबेसमध्ये जोडला गेला आहे!")
                     st.rerun()
