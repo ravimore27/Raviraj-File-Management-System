@@ -67,6 +67,14 @@ def format_to_ddmmyyyy(date_val):
         val_str = val_str[:-2]
     if ' ' in val_str:
         val_str = val_str.split(' ')[0]
+    
+    # जर दिनांक आधीपासूनच YYYY-MM-DD स्वरूपात असेल तर थेट रूपांतरित करा
+    try:
+        dt = datetime.strptime(val_str, '%Y-%m-%d')
+        return dt.strftime('%d/%m/%Y')
+    except ValueError:
+        pass
+
     try:
         dt = pd.to_datetime(val_str, dayfirst=True, errors='coerce')
         if pd.notna(dt):
@@ -187,7 +195,7 @@ with tab1:
         with col1:
             file_no = st.text_input("File No")
             subject_code = st.text_input("Subject Code")
-            inward_no = st.text_input("Inward No")
+            inward_no = st.text_input("Inward No (आवक क्रमांक)")
             computer_no = st.text_input("Computer No")
             inward_date_val = st.date_input("Inward Date (प्राप्त दिनांक)", datetime.now())
             inward_date = inward_date_val.strftime("%d/%m/%Y")
@@ -208,8 +216,9 @@ with tab1:
         submit_btn = st.form_submit_button("💾 टपाल नोंद सेव्ह करा", type="primary")
 
         if submit_btn:
-            clean_inw = get_clean_number(inward_no)
-            clean_comp = get_clean_number(computer_no)
+            # आवक क्रमांक टेक्स्ट स्वरूपात व्यवस्थित सेव्ह व्हावा म्हणून थेट स्ट्रिंग वापरली आहे
+            clean_inw = str(inward_no).strip()
+            clean_comp = str(computer_no).strip()
             
             c.execute('''
                 INSERT INTO tapal_entries (
@@ -251,11 +260,11 @@ with tab2:
         st.subheader("📌 प्रकरणाची सद्यस्थिती व माहिती")
         
         col_info1, col_info2, col_info3 = st.columns(3)
-        col_info1.write(f"*आवक क्रमांक:* {get_clean_number(entry['inward_no']) or '-'}")
-        col_info1.write(f"*आवक दिनांक:* {format_to_ddmmyyyy(entry['inward_date']) or '-'}")
-        col_info2.write(f"*अर्जदार/प्राधिकरण:* {entry['emp_name'] or entry['letter_from'] or '-'}")
-        col_info2.write(f"*पत्राचा प्रकार:* {entry['letter_type'] or '-'}")
-        col_info3.write(f"*विषय:* {entry['subject'] or '-'}")
+        col_info1.write(f"**आवक क्रमांक:** {get_clean_number(entry['inward_no']) or '-'}")
+        col_info1.write(f"**आवक दिनांक:** {format_to_ddmmyyyy(entry['inward_date']) or '-'}")
+        col_info2.write(f"**अर्जदार/प्राधिकरण:** {entry['emp_name'] or entry['letter_from'] or '-'}")
+        col_info2.write(f"**पत्राचा प्रकार:** {entry['letter_type'] or '-'}")
+        col_info3.write(f"**विषय:** {entry['subject'] or '-'}")
         
         st.markdown("---")
         st.markdown("#### 🔄 नवीन कार्यवाही व अंतिम तपशील अपडेट करा:")
@@ -364,8 +373,8 @@ with tab3:
             
         with col_acc2:
             st.subheader("📍 प्रलंबिततेनुसार गोषवारा")
-            st.write(f"- *प्रलंबित संदर्भ:* {pending_count}")
-            st.write(f"- *निपटारा झालेले:* {completed_count}")
+            st.write(f"- **प्रलंबित संदर्भ:** {pending_count}")
+            st.write(f"- **निपटारा झालेले:** {completed_count}")
 
     st.markdown("---")
     st.markdown("### 📥📤 Data Import/ Export")
@@ -393,7 +402,6 @@ with tab3:
         if uploaded_file is not None:
             if st.button("🚀 अपलोड केलेली फाईल डेटाबेसमध्ये समाविष्ट (Append) करा"):
                 try:
-                    # फाईलचा प्रकार ओळखून वाचणे
                     if uploaded_file.name.endswith('.csv'):
                         df_upload = pd.read_csv(uploaded_file)
                     else:
@@ -402,12 +410,10 @@ with tab3:
                     if 'id' in df_upload.columns:
                         df_upload = df_upload.drop(columns=['id'])
                     
-                    # डेटाबेसचे मूळ कॉलम्स मिळवणे
                     cursor = conn.cursor()
                     cursor.execute("PRAGMA table_info(tapal_entries)")
                     db_columns = [row[1] for row in cursor.fetchall() if row[1] != 'id']
                     
-                    # स्मार्ट कॉलम मॅपिंग (मराठी/इंग्रजी हेडर्स डेटाबेसशी जुळवणे)
                     column_mapping = {
                         'आवक क्रमांक': 'inward_no', 'आवक क्र': 'inward_no', 'Inward No': 'inward_no',
                         'आवक दिनांक': 'inward_date', 'Inward Date': 'inward_date',
@@ -421,14 +427,12 @@ with tab3:
                     }
                     df_upload = df_upload.rename(columns=column_mapping)
 
-                    # आवश्यक कॉलम्स जोडणे जेणेकरून एरर येणार नाही
                     for col in db_columns:
                         if col not in df_upload.columns:
                             df_upload[col] = ""
                             
                     df_upload = df_upload[[col for col in db_columns if col in df_upload.columns]]
                     
-                    # डेटाबेसमध्ये सुरक्षितपणे ॲपेंड करणे
                     df_upload.to_sql('tapal_entries', conn, if_exists='append', index=False)
                     st.success("✅ फाईलमधील सर्व डेटा यशस्वीरीत्या डेटाबेसमध्ये जोडला गेला आहे!")
                     st.rerun()
