@@ -429,9 +429,10 @@ with tab3:
                     else:
                         df_upload = pd.read_excel(uploaded_file)
                         
-                    # कोणत्याही फिक्स कॉलम नावावर अवलंबून न राहता थेट रिनेममॅप वापरणे
+                    # कॉलमचे स्पेलिंग आणि स्पेसेस पूर्णपणे साफ करणे
                     df_upload.columns = [str(c).strip() for c in df_upload.columns]
                     
+                    # अचूक आणि स्पष्ट कॉलम मॅपिंग (Subject Code आणि Subject वेगळे राहण्यासाठी)
                     rename_map = {
                         'ID': 'id_excel',
                         'Pra No': 'pra_no',
@@ -462,15 +463,17 @@ with tab3:
                     
                     df_upload = df_upload.rename(columns=rename_map)
 
-                    # अतिरिक्त फ्लेक्सिबिलिटीसाठी स्मार्ट मॅचिंग लूप
-                    for col in df_upload.columns:
+                    # अतिरिक्त खबरदारीसाठी स्मार्ट मॅचिंग (Subject Code आणि Subject ची गफलत टाळण्यासाठी)
+                    for col in list(df_upload.columns):
                         col_lower = str(col).lower()
-                        if 'inward' in col_lower and 'no' in col_lower:
+                        if col_lower in ['subject code', 'subject_code', 'subjectcode']:
+                            df_upload = df_upload.rename(columns={col: 'subject_code'})
+                        elif col_lower in ['subject'] or (('subject' in col_lower or 'विषय' in col) and 'code' not in col_lower):
+                            df_upload = df_upload.rename(columns={col: 'subject'})
+                        elif 'inward' in col_lower and 'no' in col_lower:
                             df_upload = df_upload.rename(columns={col: 'inward_no'})
                         elif 'inward' in col_lower and 'date' in col_lower:
                             df_upload = df_upload.rename(columns={col: 'inward_date'})
-                        elif 'subject' in col_lower and 'code' not in col_lower:
-                            df_upload = df_upload.rename(columns={col: 'subject'})
                         elif 'action' in col_lower and 'date' in col_lower:
                             df_upload = df_upload.rename(columns={col: 'action_taken_date'})
                         elif 'action' in col_lower and 'date' not in col_lower:
@@ -496,7 +499,7 @@ with tab3:
                         conn.commit()
                     
                     df_upload.to_sql('tapal_entries', conn, if_exists='append', index=False)
-                    st.success("✅ सर्व कॉलम आणि डेटा अचूकपणे सेव्ह झाले आहेत!")
+                    st.success("✅ Subject Code आणि Subject सह सर्व डेटा अचूक जागेवर सेव्ह झाला आहे!")
                     st.rerun()
                 except Exception as e:
                     st.error(f"फाइल अपलोड करताना त्रुटी आली: {e}")
