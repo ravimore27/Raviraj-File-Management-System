@@ -32,16 +32,37 @@ c = conn.cursor()
 c.execute('''
     CREATE TABLE IF NOT EXISTS tapal_entries (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        file_no TEXT, subject_code TEXT, inward_no TEXT, computer_no TEXT,
-        inward_date TEXT, letter_no_date TEXT, letter_from TEXT, letter_type TEXT,
-        subject TEXT, emp_name TEXT, address TEXT, district TEXT,
-        action_taken_date TEXT, action_taken TEXT, computer_no_2 TEXT,
-        application_close_date TEXT, final_action TEXT, final_action_details TEXT,
-        letter_sent_to TEXT, paper_go_in_record TEXT, calling_report TEXT, report_received_date TEXT,
+        pra_no TEXT,
+        file_no TEXT, 
+        inward_no TEXT, 
+        computer_no TEXT,
+        inward_date TEXT, 
+        letter_no_date TEXT, 
+        letter_from TEXT, 
+        letter_type TEXT,
+        subject TEXT, 
+        emp_name TEXT, 
+        address TEXT, 
+        district TEXT,
+        action_taken_date TEXT, 
+        action_taken TEXT, 
+        computer_no_2 TEXT,
+        application_close_date TEXT, 
+        final_action TEXT, 
+        final_action_details TEXT,
+        letter_sent_to TEXT, 
+        paper_go_in_record TEXT, 
+        calling_report TEXT, 
+        report_received_date TEXT,
         info_requested_from TEXT,
         office_letter_no_date TEXT,
         reminder_letter_date TEXT,
-        remarks TEXT
+        remarks TEXT,
+        reminder_1 TEXT,
+        reminder_2 TEXT,
+        reminder_3 TEXT,
+        reminder_4 TEXT,
+        reminder_discription TEXT
     )
 ''')
 conn.commit()
@@ -68,7 +89,6 @@ def format_to_ddmmyyyy(date_val):
     if ' ' in val_str:
         val_str = val_str.split(' ')[0]
     
-    # जर दिनांक आधीपासूनच YYYY-MM-DD स्वरूपात असेल तर थेट रूपांतरित करा
     try:
         dt = datetime.strptime(val_str, '%Y-%m-%d')
         return dt.strftime('%d/%m/%Y')
@@ -194,7 +214,6 @@ with tab1:
         
         with col1:
             file_no = st.text_input("File No")
-            subject_code = st.text_input("Subject Code")
             inward_no = st.text_input("Inward No (आवक क्रमांक)")
             computer_no = st.text_input("Computer No")
             inward_date_val = st.date_input("Inward Date (प्राप्त दिनांक)", datetime.now())
@@ -216,24 +235,23 @@ with tab1:
         submit_btn = st.form_submit_button("💾 टपाल नोंद सेव्ह करा", type="primary")
 
         if submit_btn:
-            # आवक क्रमांक टेक्स्ट स्वरूपात व्यवस्थित सेव्ह व्हावा म्हणून थेट स्ट्रिंग वापरली आहे
             clean_inw = str(inward_no).strip()
             clean_comp = str(computer_no).strip()
             
             c.execute('''
                 INSERT INTO tapal_entries (
-                    file_no, subject_code, inward_no, computer_no, inward_date,
+                    file_no, inward_no, computer_no, inward_date,
                     letter_no_date, letter_from, letter_type, subject, emp_name,
                     address, district, action_taken_date, action_taken, computer_no_2,
                     application_close_date, final_action, final_action_details, letter_sent_to,
                     paper_go_in_record, calling_report, report_received_date,
                     info_requested_from, office_letter_no_date, reminder_letter_date, remarks
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                file_no, subject_code, clean_inw, clean_comp, inward_date,
-                letter_no_date, letter_from, letter_type, subject, emp_name,
-                address, district, "", "", computer_no_2,
-                "", "", "", "", "नाही", "नाही", "", "", "", "", remarks
+                str(file_no), clean_inw, clean_comp, str(inward_date),
+                str(letter_no_date), str(letter_from), str(letter_type), str(subject), str(emp_name),
+                str(address), str(district), "", "", str(computer_no_2),
+                "", "", "", "", "नाही", "नाही", "", "", "", "", str(remarks)
             ))
             conn.commit()
             st.success("✅ टपाल नोंद यशस्वीरीत्या सेव्ह झाली आहे!")
@@ -396,36 +414,68 @@ with tab3:
             st.info("डाउनलोड करण्यासाठी डेटा उपलब्ध नाही.")
             
     with col_ul:
-        st.subheader("जुनी Excel किंवा CSV फाईल अपलोड करा")
-        uploaded_file = st.file_uploader("तुमची जुनी Excel किंवा CSV फाईल निवडा (Append करण्यासाठी)", type=["csv", "xlsx", "xls"])
+        st.subheader("नवीन Excel किंवा CSV फाईल अपलोड करा")
+        uploaded_file = st.file_uploader("तुमची नवीन Excel किंवा CSV फाईल निवडा", type=["csv", "xlsx", "xls"], key="new_file_uploader")
+        
+        replace_existing = st.checkbox("⚠️ जुना सर्व डेटा डिलीट करून नवीन फाईलचा डेटा टाका (Overwrite)", value=True)
         
         if uploaded_file is not None:
-            if st.button("🚀 अपलोड केलेली फाईल डेटाबेसमध्ये समाविष्ट (Append) करा"):
+            if st.button("🚀 फाईल अपलोड व अपडेट करा", type="primary"):
                 try:
                     if uploaded_file.name.endswith('.csv'):
                         df_upload = pd.read_csv(uploaded_file)
                     else:
                         df_upload = pd.read_excel(uploaded_file)
                         
+                    # कॉलममधील स्पेसेस काढणे
+                    df_upload.columns = [str(c).strip() for c in df_upload.columns]
+                    
+                    # अचूक मॅपिंग (Subject Code पूर्णपणे वगळला आहे)
+                    rename_map = {
+                        'ID': 'id_excel',
+                        'Pra No': 'pra_no',
+                        'Inward No': 'inward_no',
+                        'Inward Date': 'inward_date',
+                        'Letter No & Date': 'letter_no_date',
+                        'From': 'letter_from',
+                        'Letter Type': 'letter_type',
+                        'Subject': 'subject',
+                        'Emp Name': 'emp_name',
+                        'Address': 'address',
+                        'District': 'district',
+                        'Action Taken Date': 'action_taken_date',
+                        'Action Taken': 'action_taken',
+                        'Application Close Date': 'application_close_date',
+                        'Final Action': 'final_action',
+                        'Letter Sent to': 'letter_sent_to',
+                        'Paper Go to Record': 'paper_go_in_record',
+                        'Calling Report': 'calling_report',
+                        'Report Received Date': 'report_received_date',
+                        'Reminder 1': 'reminder_1',
+                        'Reminder 2': 'reminder_2',
+                        'Reminder 3': 'reminder_3',
+                        'Reminder 4': 'reminder_4',
+                        'Reminder Discription': 'reminder_discription'
+                    }
+                    
+                    df_upload = df_upload.rename(columns=rename_map)
+
+                    # Subject नावाची खात्रीशीर जोडणी
+                    if 'subject' not in df_upload.columns:
+                        for col in df_upload.columns:
+                            if 'subject' in str(col).lower() or 'विषय' in str(col):
+                                df_upload = df_upload.rename(columns={col: 'subject'})
+
                     if 'id' in df_upload.columns:
                         df_upload = df_upload.drop(columns=['id'])
-                    
+                    if 'id_excel' in df_upload.columns:
+                        df_upload = df_upload.drop(columns=['id_excel'])
+                    if 'Subject Code' in df_upload.columns:
+                        df_upload = df_upload.drop(columns=['Subject Code'])
+
                     cursor = conn.cursor()
                     cursor.execute("PRAGMA table_info(tapal_entries)")
                     db_columns = [row[1] for row in cursor.fetchall() if row[1] != 'id']
-                    
-                    column_mapping = {
-                        'आवक क्रमांक': 'inward_no', 'आवक क्र': 'inward_no', 'Inward No': 'inward_no',
-                        'आवक दिनांक': 'inward_date', 'Inward Date': 'inward_date',
-                        'पत्र क्र. व दिनांक': 'letter_no_date', 'पत्र क्र व दिनांक': 'letter_no_date',
-                        'कोणाकडून मिळाले': 'letter_from', 'From': 'letter_from',
-                        'पत्राचा प्रकार': 'letter_type', 'Letter Type': 'letter_type',
-                        'पत्राचा विषय': 'subject', 'विषय': 'subject', 'Subject': 'subject',
-                        'कार्यवाही दिनांक': 'action_taken_date', 'Action Taken Date': 'action_taken_date',
-                        'केलेली कार्यवाही': 'action_taken', 'Action Taken': 'action_taken',
-                        'शेरा': 'remarks', 'Remarks': 'remarks'
-                    }
-                    df_upload = df_upload.rename(columns=column_mapping)
 
                     for col in db_columns:
                         if col not in df_upload.columns:
@@ -433,8 +483,12 @@ with tab3:
                             
                     df_upload = df_upload[[col for col in db_columns if col in df_upload.columns]]
                     
+                    if replace_existing:
+                        cursor.execute("DELETE FROM tapal_entries")
+                        conn.commit()
+                    
                     df_upload.to_sql('tapal_entries', conn, if_exists='append', index=False)
-                    st.success("✅ फाईलमधील सर्व डेटा यशस्वीरीत्या डेटाबेसमध्ये जोडला गेला आहे!")
+                    st.success("✅ Subject Code वगळून सर्व डेटा अचूकपणे अपलोड झाला आहे!")
                     st.rerun()
                 except Exception as e:
                     st.error(f"फाइल अपलोड करताना त्रुटी आली: {e}")
