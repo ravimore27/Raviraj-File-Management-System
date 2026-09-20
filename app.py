@@ -413,15 +413,29 @@ with tab3:
                     db_columns = [row[1] for row in cursor.fetchall() if row[1] != 'id']
                     
                     column_mapping = {
-                        'आवक क्रमांक': 'inward_no', 'आवक क्र': 'inward_no', 'Inward No': 'inward_no',
-                        'आवक दिनांक': 'inward_date', 'Inward Date': 'inward_date',
-                        'पत्र क्र. व दिनांक': 'letter_no_date', 'पत्र क्र व दिनांक': 'letter_no_date',
-                        'कोणाकडून मिळाले': 'letter_from', 'From': 'letter_from',
-                        'पत्राचा प्रकार': 'letter_type', 'Letter Type': 'letter_type',
-                        'पत्राचा विषय': 'subject', 'विषय': 'subject', 'Subject': 'subject',
-                        'कार्यवाही दिनांक': 'action_taken_date', 'Action Taken Date': 'action_taken_date',
-                        'केलेली कार्यवाही': 'action_taken', 'Action Taken': 'action_taken',
-                        'शेरा': 'remarks', 'Remarks': 'remarks'
+                        'आवक क्रमांक': 'inward_no', 
+                        'आवक क्र': 'inward_no', 
+                        'Inward No': 'inward_no',
+                        'Inward / computer No': 'inward_no',
+                        'Inward/computer No': 'inward_no',
+                        'Inward / Computer No': 'inward_no',
+                        'आवक दिनांक': 'inward_date', 
+                        'Inward Date': 'inward_date',
+                        'पत्र क्र. व दिनांक': 'letter_no_date', 
+                        'पत्र क्र व दिनांक': 'letter_no_date',
+                        'कोणाकडून मिळाले': 'letter_from', 
+                        'From': 'letter_from',
+                        'पत्राचा प्रकार': 'letter_type', 
+                        'Letter Type': 'letter_type',
+                        'पत्राचा विषय': 'subject', 
+                        'विषय': 'subject', 
+                        'Subject': 'subject',
+                        'कार्यवाही दिनांक': 'action_taken_date', 
+                        'Action Taken Date': 'action_taken_date',
+                        'केलेली कार्यवाही': 'action_taken', 
+                        'Action Taken': 'action_taken',
+                        'शेरा': 'remarks', 
+                        'Remarks': 'remarks'
                     }
                     df_upload = df_upload.rename(columns=column_mapping)
 
