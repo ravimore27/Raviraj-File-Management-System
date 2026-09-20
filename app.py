@@ -67,40 +67,38 @@ def format_to_ddmmyyyy(date_val):
         val_str = val_str[:-2]
     if ' ' in val_str:
         val_str = val_str.split(' ')[0]
-    try:
-        # दिनांक अचूक राहण्यासाठी dayfirst=True वापरले आहे
-        dt = pd.to_datetime(val_str, dayfirst=True, errors='coerce')
-        if pd.notna(dt):
-            return dt.strftime('%d/%m/%Y')
-        return val_str
-    except Exception:
-        return val_str
+    # तारीख बदलू नये म्हणून जशी आहे तशी टेक्स्ट स्वरूपात रिटर्न करा
+    return val_str
 
 def parse_date_safely(date_str):
     if not date_str or str(date_str).lower() in ['nan', 'nat', 'none', '']:
-        return None
+        return date.today()
     val_str = str(date_str).strip()
     if val_str.endswith('.0'):
         val_str = val_str[:-2]
     if ' ' in val_str:
         val_str = val_str.split(' ')[0]
     try:
-        dt = pd.to_datetime(val_str, dayfirst=True, errors='coerce')
-        return dt.date() if not pd.isna(dt) else None
+        parts = val_str.split('/')
+        if len(parts) == 3:
+            return date(int(parts[2]), int(parts[1]), int(parts[0]))
     except Exception:
-        return None
+        pass
+    return date.today()
 
 def calculate_pending_days(inward_date_str):
     if not inward_date_str or pd.isna(inward_date_str) or str(inward_date_str).lower() in ['nan', 'nat', 'none', '']:
         return ""
     try:
-        inward_dt = pd.to_datetime(inward_date_str, dayfirst=True, errors='coerce')
-        if pd.isna(inward_dt):
-            return ""
-        days = (datetime.now() - inward_dt).days
-        return f"{days} दिवस" if days >= 0 else "0 दिवस"
+        val_str = str(inward_date_str).strip().split(' ')[0]
+        parts = val_str.split('/')
+        if len(parts) == 3:
+            inward_dt = datetime(int(parts[2]), int(parts[1]), int(parts[0]))
+            days = (datetime.now() - inward_dt).days
+            return f"{days} दिवस" if days >= 0 else "0 दिवस"
     except Exception:
-        return ""
+        pass
+    return ""
 
 def clean_df(df):
     if df is not None and not df.empty:
@@ -393,9 +391,9 @@ with tab3:
             if st.button("🚀 अपलोड केलेली फाईल डेटाबेसमध्ये समाविष्ट (Append) करा"):
                 try:
                     if uploaded_file.name.endswith('.csv'):
-                        df_upload = pd.read_csv(uploaded_file)
+                        df_upload = pd.read_csv(uploaded_file, dtype=str)
                     else:
-                        df_upload = pd.read_excel(uploaded_file)
+                        df_upload = pd.read_excel(uploaded_file, dtype=str)
                         
                     if 'id' in df_upload.columns:
                         df_upload = df_upload.drop(columns=['id'])
