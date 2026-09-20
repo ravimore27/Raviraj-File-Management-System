@@ -68,7 +68,10 @@ def format_to_ddmmyyyy(date_val):
     if ' ' in val_str:
         val_str = val_str.split(' ')[0]
     try:
-        dt = pd.to_datetime(val_str, dayfirst=True, errors='coerce')
+        # दिनांकाची खात्रीशीर फॉर्मेटिंग (दिवस आधी)
+        dt = pd.to_datetime(val_str, format='%d/%m/%Y', errors='coerce')
+        if pd.isna(dt):
+            dt = pd.to_datetime(val_str, dayfirst=True, errors='coerce')
         if pd.notna(dt):
             return dt.strftime('%d/%m/%Y')
         return val_str
@@ -84,7 +87,9 @@ def parse_date_safely(date_str):
     if ' ' in val_str:
         val_str = val_str.split(' ')[0]
     try:
-        dt = pd.to_datetime(val_str, dayfirst=True, errors='coerce')
+        dt = pd.to_datetime(val_str, format='%d/%m/%Y', errors='coerce')
+        if pd.isna(dt):
+            dt = pd.to_datetime(val_str, dayfirst=True, errors='coerce')
         return dt.date() if not pd.isna(dt) else None
     except Exception:
         return None
@@ -93,7 +98,7 @@ def calculate_pending_days(inward_date_str):
     if not inward_date_str or pd.isna(inward_date_str) or str(inward_date_str).lower() in ['nan', 'nat', 'none', '']:
         return ""
     try:
-        inward_dt = pd.to_datetime(inward_date_str, format='%d/%m/%Y', dayfirst=True, errors='coerce')
+        inward_dt = pd.to_datetime(inward_date_str, format='%d/%m/%Y', errors='coerce')
         if pd.isna(inward_dt):
             inward_dt = pd.to_datetime(inward_date_str, dayfirst=True, errors='coerce')
         if pd.isna(inward_dt):
@@ -393,7 +398,6 @@ with tab3:
         if uploaded_file is not None:
             if st.button("🚀 अपलोड केलेली फाईल डेटाबेसमध्ये समाविष्ट (Append) करा"):
                 try:
-                    # फाईलचा प्रकार ओळखून वाचणे
                     if uploaded_file.name.endswith('.csv'):
                         df_upload = pd.read_csv(uploaded_file)
                     else:
@@ -402,12 +406,10 @@ with tab3:
                     if 'id' in df_upload.columns:
                         df_upload = df_upload.drop(columns=['id'])
                     
-                    # डेटाबेसचे मूळ कॉलम्स मिळवणे
                     cursor = conn.cursor()
                     cursor.execute("PRAGMA table_info(tapal_entries)")
                     db_columns = [row[1] for row in cursor.fetchall() if row[1] != 'id']
                     
-                    # स्मार्ट कॉलम मॅपिंग (मराठी/इंग्रजी हेडर्स डेटाबेसशी जुळवणे)
                     column_mapping = {
                         'आवक क्रमांक': 'inward_no', 'आवक क्र': 'inward_no', 'Inward No': 'inward_no',
                         'आवक दिनांक': 'inward_date', 'Inward Date': 'inward_date',
@@ -421,14 +423,12 @@ with tab3:
                     }
                     df_upload = df_upload.rename(columns=column_mapping)
 
-                    # आवश्यक कॉलम्स जोडणे जेणेकरून एरर येणार नाही
                     for col in db_columns:
                         if col not in df_upload.columns:
                             df_upload[col] = ""
                             
                     df_upload = df_upload[[col for col in db_columns if col in df_upload.columns]]
                     
-                    # डेटाबेसमध्ये सुरक्षितपणे ॲपेंड करणे
                     df_upload.to_sql('tapal_entries', conn, if_exists='append', index=False)
                     st.success("✅ फाईलमधील सर्व डेटा यशस्वीरीत्या डेटाबेसमध्ये जोडला गेला आहे!")
                     st.rerun()
