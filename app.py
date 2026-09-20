@@ -394,14 +394,11 @@ with tab3:
             st.info("डाउनलोड करण्यासाठी डेटा उपलब्ध नाही.")
             
     with col_ul:
-        st.subheader("नवीन Excel किंवा CSV फाईल अपलोड करा")
-        uploaded_file = st.file_uploader("तुमची नवीन Excel किंवा CSV फाईल निवडा", type=["csv", "xlsx", "xls"], key="new_file_uploader")
-        
-        # जुना डेटा काढून टाकायचा का यासाठी चेकबॉक्स (Overwrite Option)
-        replace_existing = st.checkbox("⚠️ जुना सर्व डेटा डिलीट करून नवीन फाईलचा डेटा टाका (Overwrite)", value=True)
+        st.subheader("जुनी Excel किंवा CSV फाईल अपलोड करा")
+        uploaded_file = st.file_uploader("तुमची जुनी Excel किंवा CSV फाईल निवडा (Append करण्यासाठी)", type=["csv", "xlsx", "xls"])
         
         if uploaded_file is not None:
-            if st.button("🚀 फाईल अपलोड व अपडेट करा", type="primary"):
+            if st.button("🚀 अपलोड केलेली फाईल डेटाबेसमध्ये समाविष्ट (Append) करा"):
                 try:
                     if uploaded_file.name.endswith('.csv'):
                         df_upload = pd.read_csv(uploaded_file)
@@ -411,7 +408,7 @@ with tab3:
                     if 'id' in df_upload.columns:
                         df_upload = df_upload.drop(columns=['id'])
                     
-                    # Smart Column Matching (स्मार्ट कॉलम मॅचिंग)
+                    # ----------------- SMART COLUMN MATCHING (नवीन सुधारणा) -----------------
                     df_upload.columns = [str(c).strip() for c in df_upload.columns]
                     for col in df_upload.columns:
                         col_lower = col.lower()
@@ -430,6 +427,7 @@ with tab3:
                             df_upload = df_upload.rename(columns={col: 'action_taken'})
                         elif 'remark' in col_lower or 'शेरा' in col:
                             df_upload = df_upload.rename(columns={col: 'remarks'})
+                    # ------------------------------------------------------------------------
 
                     cursor = conn.cursor()
                     cursor.execute("PRAGMA table_info(tapal_entries)")
@@ -441,13 +439,8 @@ with tab3:
                             
                     df_upload = df_upload[[col for col in db_columns if col in df_upload.columns]]
                     
-                    # जर चेकबॉक्स चालू असेल तर जुना डेटाबेस रिकामा करा
-                    if replace_existing:
-                        cursor.execute("DELETE FROM tapal_entries")
-                        conn.commit()
-                    
                     df_upload.to_sql('tapal_entries', conn, if_exists='append', index=False)
-                    st.success("✅ जुना डेटा यशस्वीरीत्या काढून नवीन फाईल अपलोड केली आहे!")
+                    st.success("✅ फाईलमधील सर्व डेटा यशस्वीरीत्या डेटाबेसमध्ये जोडला गेला आहे!")
                     st.rerun()
                 except Exception as e:
                     st.error(f"फाइल अपलोड करताना त्रुटी आली: {e}")
