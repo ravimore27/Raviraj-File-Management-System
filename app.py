@@ -68,7 +68,6 @@ def format_to_ddmmyyyy(date_val):
     if ' ' in val_str:
         val_str = val_str.split(' ')[0]
     
-    # जर दिनांक आधीपासूनच YYYY-MM-DD स्वरूपात असेल तर थेट रूपांतरित करा
     try:
         dt = datetime.strptime(val_str, '%Y-%m-%d')
         return dt.strftime('%d/%m/%Y')
@@ -216,7 +215,6 @@ with tab1:
         submit_btn = st.form_submit_button("💾 टपाल नोंद सेव्ह करा", type="primary")
 
         if submit_btn:
-            # आवक क्रमांक टेक्स्ट स्वरूपात व्यवस्थित सेव्ह व्हावा म्हणून थेट स्ट्रिंग वापरली आहे
             clean_inw = str(inward_no).strip()
             clean_comp = str(computer_no).strip()
             
@@ -230,10 +228,10 @@ with tab1:
                     info_requested_from, office_letter_no_date, reminder_letter_date, remarks
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                file_no, subject_code, clean_inw, clean_comp, inward_date,
-                letter_no_date, letter_from, letter_type, subject, emp_name,
-                address, district, "", "", computer_no_2,
-                "", "", "", "", "नाही", "नाही", "", "", "", "", remarks
+                str(file_no), str(subject_code), clean_inw, clean_comp, str(inward_date),
+                str(letter_no_date), str(letter_from), str(letter_type), str(subject), str(emp_name),
+                str(address), str(district), "", "", str(computer_no_2),
+                "", "", "", "", "नाही", "नाही", "", "", "", "", str(remarks)
             ))
             conn.commit()
             st.success("✅ टपाल नोंद यशस्वीरीत्या सेव्ह झाली आहे!")
