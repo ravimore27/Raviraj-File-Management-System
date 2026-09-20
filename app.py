@@ -34,7 +34,6 @@ c.execute('''
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         pra_no TEXT,
         file_no TEXT, 
-        subject_code TEXT, 
         inward_no TEXT, 
         computer_no TEXT,
         inward_date TEXT, 
@@ -215,7 +214,6 @@ with tab1:
         
         with col1:
             file_no = st.text_input("File No")
-            subject_code = st.text_input("Subject Code")
             inward_no = st.text_input("Inward No (आवक क्रमांक)")
             computer_no = st.text_input("Computer No")
             inward_date_val = st.date_input("Inward Date (प्राप्त दिनांक)", datetime.now())
@@ -242,15 +240,15 @@ with tab1:
             
             c.execute('''
                 INSERT INTO tapal_entries (
-                    file_no, subject_code, inward_no, computer_no, inward_date,
+                    file_no, inward_no, computer_no, inward_date,
                     letter_no_date, letter_from, letter_type, subject, emp_name,
                     address, district, action_taken_date, action_taken, computer_no_2,
                     application_close_date, final_action, final_action_details, letter_sent_to,
                     paper_go_in_record, calling_report, report_received_date,
                     info_requested_from, office_letter_no_date, reminder_letter_date, remarks
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                str(file_no), str(subject_code), clean_inw, clean_comp, str(inward_date),
+                str(file_no), clean_inw, clean_comp, str(inward_date),
                 str(letter_no_date), str(letter_from), str(letter_type), str(subject), str(emp_name),
                 str(address), str(district), "", "", str(computer_no_2),
                 "", "", "", "", "नाही", "नाही", "", "", "", "", str(remarks)
@@ -429,14 +427,13 @@ with tab3:
                     else:
                         df_upload = pd.read_excel(uploaded_file)
                         
-                    # कॉलममधील अतिरिक्त स्पेसेस काढून टाकणे
+                    # कॉलममधील स्पेसेस काढणे
                     df_upload.columns = [str(c).strip() for c in df_upload.columns]
                     
-                    # अचूक कॉलम मॅपिंग (Subject Code आणि Subject वेगळे राहतील)
+                    # अचूक मॅपिंग (Subject Code पूर्णपणे वगळला आहे)
                     rename_map = {
                         'ID': 'id_excel',
                         'Pra No': 'pra_no',
-                        'Subject Code': 'subject_code',
                         'Inward No': 'inward_no',
                         'Inward Date': 'inward_date',
                         'Letter No & Date': 'letter_no_date',
@@ -463,21 +460,18 @@ with tab3:
                     
                     df_upload = df_upload.rename(columns=rename_map)
 
-                    # खात्रीशीर रीनेमिंग (Subject Code कधीही Subject मध्ये जाणार नाही)
-                    if 'subject_code' not in df_upload.columns:
-                        for col in df_upload.columns:
-                            if 'subject code' in str(col).lower() or str(col).lower() == 'subject_code':
-                                df_upload = df_upload.rename(columns={col: 'subject_code'})
-                                
+                    # Subject नावाची खात्रीशीर जोडणी
                     if 'subject' not in df_upload.columns:
                         for col in df_upload.columns:
-                            if str(col).lower() == 'subject' or ('subject' in str(col).lower() and 'code' not in str(col).lower()):
+                            if 'subject' in str(col).lower() or 'विषय' in str(col):
                                 df_upload = df_upload.rename(columns={col: 'subject'})
 
                     if 'id' in df_upload.columns:
                         df_upload = df_upload.drop(columns=['id'])
                     if 'id_excel' in df_upload.columns:
                         df_upload = df_upload.drop(columns=['id_excel'])
+                    if 'Subject Code' in df_upload.columns:
+                        df_upload = df_upload.drop(columns=['Subject Code'])
 
                     cursor = conn.cursor()
                     cursor.execute("PRAGMA table_info(tapal_entries)")
@@ -494,7 +488,7 @@ with tab3:
                         conn.commit()
                     
                     df_upload.to_sql('tapal_entries', conn, if_exists='append', index=False)
-                    st.success("✅ Subject Code आणि Subject अचूकपणे आपापल्या जागी सेव्ह झाले आहेत!")
+                    st.success("✅ Subject Code वगळून सर्व डेटा अचूकपणे अपलोड झाला आहे!")
                     st.rerun()
                 except Exception as e:
                     st.error(f"फाइल अपलोड करताना त्रुटी आली: {e}")
