@@ -68,10 +68,8 @@ def format_to_ddmmyyyy(date_val):
     if ' ' in val_str:
         val_str = val_str.split(' ')[0]
     try:
-        # दिनांकाची खात्रीशीर फॉर्मेटिंग (दिवस आधी)
-        dt = pd.to_datetime(val_str, format='%d/%m/%Y', errors='coerce')
-        if pd.isna(dt):
-            dt = pd.to_datetime(val_str, dayfirst=True, errors='coerce')
+        # दिनांक अचूक राहण्यासाठी dayfirst=True वापरले आहे
+        dt = pd.to_datetime(val_str, dayfirst=True, errors='coerce')
         if pd.notna(dt):
             return dt.strftime('%d/%m/%Y')
         return val_str
@@ -87,9 +85,7 @@ def parse_date_safely(date_str):
     if ' ' in val_str:
         val_str = val_str.split(' ')[0]
     try:
-        dt = pd.to_datetime(val_str, format='%d/%m/%Y', errors='coerce')
-        if pd.isna(dt):
-            dt = pd.to_datetime(val_str, dayfirst=True, errors='coerce')
+        dt = pd.to_datetime(val_str, dayfirst=True, errors='coerce')
         return dt.date() if not pd.isna(dt) else None
     except Exception:
         return None
@@ -98,9 +94,7 @@ def calculate_pending_days(inward_date_str):
     if not inward_date_str or pd.isna(inward_date_str) or str(inward_date_str).lower() in ['nan', 'nat', 'none', '']:
         return ""
     try:
-        inward_dt = pd.to_datetime(inward_date_str, format='%d/%m/%Y', errors='coerce')
-        if pd.isna(inward_dt):
-            inward_dt = pd.to_datetime(inward_date_str, dayfirst=True, errors='coerce')
+        inward_dt = pd.to_datetime(inward_date_str, dayfirst=True, errors='coerce')
         if pd.isna(inward_dt):
             return ""
         days = (datetime.now() - inward_dt).days
