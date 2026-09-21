@@ -27,7 +27,7 @@ st.markdown("""
 
 # ----------------- PASSWORD AUTHENTICATION -----------------
 # येथे तुम्ही हवा असलेला पासवर्ड सेट करू शकता (उदा. "revenue123")
-APP_PASSWORD = "revenue123"
+APP_PASSWORD = "raviraj@123"
 
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
