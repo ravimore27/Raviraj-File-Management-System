@@ -25,6 +25,30 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ----------------- PASSWORD AUTHENTICATION -----------------
+# येथे तुम्ही हवा असलेला पासवर्ड सेट करू शकता (उदा. "revenue123")
+APP_PASSWORD = "revenue123"
+
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown("### 🔐 महसूल विभाग - टपाल प्रणाली लॉगिन")
+        st.write("कृपया प्रणालीमध्ये प्रवेश करण्यासाठी पासवर्ड प्रविष्ट करा:")
+        entered_password = st.text_input("पासवर्ड (Password)", type="password")
+        
+        if st.button("लॉगिन करा (Login)", type="primary"):
+            if entered_password == APP_PASSWORD:
+                st.session_state.authenticated = True
+                st.success("सफलतापूर्वक लॉगिन झाले!")
+                st.rerun()
+            else:
+                st.error("चुकीचा पासवर्ड! कृपया पुन्हा प्रयत्न करा.")
+    st.stop()  # पासवर्ड मिळेपर्यंत खालील कोड लोड होणार नाही
+
 # ----------------- SQLITE DATABASE SETUP -----------------
 conn = sqlite3.connect("tapal_data.db", check_same_thread=False)
 c = conn.cursor()
@@ -195,6 +219,13 @@ st.markdown("""
     <p>टपाल नोंद, पुढील कार्यवाही अद्ययावत करणे, गोषवारा व रिपोर्ट्स</p>
 </div>
 """, unsafe_allow_html=True)
+
+# Logout option in sidebar
+with st.sidebar:
+    st.write("⚙️ **खाते व्यवस्थापन**")
+    if st.button("🔒 लॉगआऊट (Logout)"):
+        st.session_state.authenticated = False
+        st.rerun()
 
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "📝 नवीन टपाल नोंद", 
@@ -427,10 +458,8 @@ with tab3:
                     else:
                         df_upload = pd.read_excel(uploaded_file)
                         
-                    # कॉलममधील स्पेसेस काढणे
                     df_upload.columns = [str(c).strip() for c in df_upload.columns]
                     
-                    # अचूक मॅपिंग (Subject Code पूर्णपणे वगळला आहे)
                     rename_map = {
                         'ID': 'id_excel',
                         'Pra No': 'pra_no',
@@ -460,7 +489,6 @@ with tab3:
                     
                     df_upload = df_upload.rename(columns=rename_map)
 
-                    # Subject नावाची खात्रीशीर जोडणी
                     if 'subject' not in df_upload.columns:
                         for col in df_upload.columns:
                             if 'subject' in str(col).lower() or 'विषय' in str(col):
@@ -488,7 +516,7 @@ with tab3:
                         conn.commit()
                     
                     df_upload.to_sql('tapal_entries', conn, if_exists='append', index=False)
-                    st.success("✅ Subject Code वगळून सर्व डेटा अचूकपणे अपलोड झाला आहे!")
+                    st.success("✅ नवीन फाईल यशस्वीरीत्या अपलोड झाली आहे!")
                     st.rerun()
                 except Exception as e:
                     st.error(f"फाइल अपलोड करताना त्रुटी आली: {e}")
